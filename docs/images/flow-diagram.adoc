@@ -1,0 +1,57 @@
+[mermaid,my-diagram,svg,width=400]
+....
+
+flowchart TB
+    start((POR))
+    force_comms[Force Comms]
+    check_pn[Check Product Number]
+    check_reset[Check Reset Status]
+    en_streaming[Enable I2C Streaming]
+    ack_reset[Acknowledge Reset]
+    soft_reset[Soft Reset]
+    is_reset{Reset Bit Set?}
+    read_quad[Read Quadrature]
+    writemm[Write Settings]
+    ati[Redo ATI]
+    wait_for_ati[Wait For ATI to Finish]
+    zero[Zero Now]
+    event_mode[Enter Event Mode]
+
+    ready[Wait For Ready]
+    check_flags[Check Flags]
+    check_reset_runtime{Reset Bit Set?}
+    read_events[Read and Process Events]
+
+    start --> force_comms
+    check_reset_runtime --> |Yes| en_streaming
+
+    subgraph Runtime -- Quadrature
+        read_quad --> read_quad
+    end
+
+    subgraph Runtime -- I2C
+        ready --> |Ready| check_flags
+        check_flags --> check_reset_runtime
+        check_reset_runtime --> |No| read_events
+        read_events --> ready
+    end
+
+    subgraph Initialise IQS323
+        force_comms --> check_pn
+        check_pn --> en_streaming
+        en_streaming --> check_reset
+        check_reset --> is_reset
+        is_reset --> |Yes| ack_reset
+        is_reset --> |No| soft_reset
+        soft_reset --> en_streaming
+        ack_reset --> writemm
+        writemm --> ati
+        ati --> wait_for_ati
+        wait_for_ati --> zero
+        zero --> event_mode
+    end
+
+    event_mode --> read_quad
+    event_mode --> ready
+
+....
